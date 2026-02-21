@@ -33,17 +33,21 @@ impl Handler {
             cmd::REQUEST_ICON => {
                 let id = reader.read_int();
                 info!("- [#{}] REQUEST_ICON id={} zoom={}", session_id, id, zoom);
-                
+
                 let file_path = paths.icon_path(zoom, id);
                 if let Some(data) = self.data_store.load_file(&file_path).await {
                     self.session_mgr.on_request_ok(session_id);
-                    Ok(vec![(cmd::REQUEST_ICON, data)])
+                    let mut w = MessageWriter::new();
+                    w.write_int(id);
+                    w.write_int(data.len() as i32);
+                    w.write_bytes(&data);
+                    Ok(vec![(cmd::REQUEST_ICON, w.into_bytes())])
                 } else {
                     self.session_mgr.on_request_not_found(session_id);
                     warn!("Icon {} not found at {}", id, file_path);
                     let mut w = MessageWriter::new();
                     w.write_int(id);
-                    w.write_byte(0);
+                    w.write_int(0);
                     Ok(vec![(cmd::REQUEST_ICON, w.into_bytes())])
                 }
             }
