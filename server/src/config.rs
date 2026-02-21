@@ -27,6 +27,18 @@ pub struct ServerConfig {
     /// Default zoom level nếu client chưa gửi
     #[serde(default = "default_zoom")]
     pub default_zoom: u8,
+
+    /// Idle timeout (seconds) - kick sessions không hoạt động
+    #[serde(default)]
+    pub idle_timeout_secs: Option<u64>,
+
+    /// Max cache size in MB (0 = unlimited)
+    #[serde(default)]
+    pub max_cache_mb: Option<u64>,
+
+    /// Interval for periodic stats logging (seconds)
+    #[serde(default)]
+    pub stats_interval_secs: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -157,6 +169,9 @@ impl Default for FreightConfig {
                 port: default_port(),
                 max_connections: default_max_connections(),
                 default_zoom: default_zoom(),
+                idle_timeout_secs: Some(300),
+                max_cache_mb: Some(512),
+                stats_interval_secs: Some(60),
             },
             paths: PathsConfig {
                 base_dir: default_base_dir(),

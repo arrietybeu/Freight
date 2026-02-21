@@ -3,6 +3,12 @@ server:
   port: 14450
   max_connections: 10000
   default_zoom: 2
+  # Idle timeout: kick sessions không hoạt động sau N giây
+  idle_timeout_secs: 300
+  # Max cache size (MB). 0 = unlimited
+  max_cache_mb: 512
+  # In stats mỗi N giây
+  stats_interval_secs: 60
 
 paths:
   base_dir: "./data"
