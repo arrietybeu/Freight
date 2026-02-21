@@ -1,21 +1,10 @@
-# ====================================================
-# Freight Data Server - Configuration
-# ====================================================
-# Asset paths sử dụng placeholders:
-#   {base}  -> paths.base_dir
-#   {zoom}  -> zoom level của client (1, 2, 4, ...)
-#   {id}    -> resource ID
-# ====================================================
-
 server:
   host: "0.0.0.0"
-  port: 14445
+  port: 14450
   max_connections: 10000
-  # Zoom level mặc định nếu client chưa gửi FREIGHT_INIT
-  default_zoom: 1
+  default_zoom: 2
 
 paths:
-  # Root directory chứa tất cả assets
   base_dir: "./data"
 
   # Icon sprites (PNG)

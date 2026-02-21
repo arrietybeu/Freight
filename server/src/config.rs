@@ -79,7 +79,7 @@ pub struct PathsConfig {
 // ===== Default values =====
 
 fn default_host() -> String { "0.0.0.0".to_string() }
-fn default_port() -> u16 { 14445 }
+fn default_port() -> u16 { 14450 }
 fn default_max_connections() -> usize { 10000 }
 fn default_zoom() -> u8 { 1 }
 fn default_base_dir() -> String { "./data".to_string() }
