@@ -55,8 +55,8 @@ impl Cipher {
         }
     }
 
-    /// Generate random key và set cho cipher
-    pub fn generate_key(&mut self, length: u8) -> Vec<i8> {
+    /// Generate key mà KHÔNG set vào cipher (static method)
+    pub fn generate_key_only(length: u8) -> Vec<i8> {
         use std::time::{SystemTime, UNIX_EPOCH};
         
         let seed = SystemTime::now()
@@ -66,23 +66,34 @@ impl Cipher {
         
         // Simple LCG random
         let mut rng = seed;
-        let mut key = Vec::with_capacity(length as usize);
+        let mut raw_key = Vec::with_capacity(length as usize);
         
         for _ in 0..length {
             rng = rng.wrapping_mul(1103515245).wrapping_add(12345);
-            key.push((rng >> 16) as i8);
+            raw_key.push((rng >> 16) as i8);
         }
         
-        // XOR chain như client
-        for i in 0..key.len() - 1 {
-            key[i + 1] ^= key[i];
+        raw_key
+    }
+
+    /// Set key từ raw key (sẽ XOR chain)
+    pub fn set_key_from_raw(&mut self, raw_key: &[i8]) {
+        // XOR chain như client làm
+        let mut processed = raw_key.to_vec();
+        for i in 0..processed.len() - 1 {
+            processed[i + 1] ^= processed[i];
         }
-        
-        self.key = key.clone();
+        self.key = processed;
         self.read_pos = 0;
         self.write_pos = 0;
-        
-        key
+    }
+
+    /// Generate random key và set cho cipher (old method - không dùng cho key exchange)
+    /// Returns: raw_key_to_send
+    pub fn generate_key(&mut self, length: u8) -> Vec<i8> {
+        let raw_key = Self::generate_key_only(length);
+        self.set_key_from_raw(&raw_key);
+        raw_key
     }
     
     pub fn set_key(&mut self, key: Vec<i8>) {
@@ -303,10 +314,15 @@ pub fn build_response(cipher: &mut Cipher, command: i8, data: &[u8]) -> Vec<u8> 
         }
     } else {
         // Unencrypted response (only for GET_SESSION_ID)
-        response.put_i8(command);
-        let len = data.len() as u16;
-        response.put_u16(len);
+        // QUAN TRỌNG: Ghi từng byte riêng để đảm bảo đúng format
+        response.put_u8(command as u8);  // command byte
+        response.put_u8((data.len() >> 8) as u8);  // length high byte
+        response.put_u8((data.len() & 0xFF) as u8);  // length low byte
         response.extend_from_slice(data);
+        
+        // Debug print
+        eprintln!("[DEBUG] build_response: cmd={} (0x{:02X}), len={}, first_bytes={:02X?}", 
+            command, command as u8, data.len(), &response[..std::cmp::min(10, response.len())]);
     }
     
     response.to_vec()

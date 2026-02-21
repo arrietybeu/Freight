@@ -132,8 +132,14 @@ impl Session {
         }
     }
 
+    /// Đọc message giống hệt cách game server đọc từ client (Session_ME):
+    /// - Command: 1 byte
+    /// - Length: LUÔN 2 bytes từ client
+    ///   + Chưa có key: ushort little-endian (BinaryWriter.Write(ushort))
+    ///   + Có key: Big Endian (high byte trước, low byte sau) + encrypted
+    /// - Data: từng byte (encrypted nếu có key)
     async fn read_message(&mut self) -> Result<Message, ProtocolError> {
-        // Read command byte
+        // === Đọc command (1 byte) ===
         let cmd_byte = self.stream.read_i8().await?;
         let mut bytes_read: u64 = 1;
         
@@ -142,47 +148,28 @@ impl Session {
         } else {
             cmd_byte
         };
-
-        // Check if big data command
-        let is_big_data = cmd::BIG_DATA_CMDS.contains(&command);
         
-        // Read length
-        let length = if is_big_data {
-            // 3-byte length (little endian trong readMessage2 của client)
-            let b1 = self.stream.read_i8().await?;
-            let b2 = self.stream.read_i8().await?;
-            let b3 = self.stream.read_i8().await?;
-            bytes_read += 3;
-            
-            if self.key_exchanged {
-                let l1 = (self.cipher.decrypt_byte(b1) as u8) as usize + 128;
-                let l2 = (self.cipher.decrypt_byte(b2) as u8) as usize + 128;
-                let l3 = (self.cipher.decrypt_byte(b3) as u8) as usize + 128;
-                (l3 * 256 + l2) * 256 + l1
-            } else {
-                let l1 = (b1 as u8) as usize + 128;
-                let l2 = (b2 as u8) as usize + 128;
-                let l3 = (b3 as u8) as usize + 128;
-                (l3 * 256 + l2) * 256 + l1
-            }
+        eprintln!("[DEBUG] read_message: raw_cmd={}, decrypted={}, key_exchanged={}", 
+            cmd_byte, command, self.key_exchanged);
+        
+        // === Đọc length (LUÔN 2 bytes từ client) ===
+        let b1 = self.stream.read_u8().await?;
+        let b2 = self.stream.read_u8().await?;
+        bytes_read += 2;
+        
+        let length = if self.key_exchanged {
+            // Big Endian + encrypted: high byte trước, low byte sau
+            let l1 = (self.cipher.decrypt_byte(b1 as i8) as u8) as usize;
+            let l2 = (self.cipher.decrypt_byte(b2 as i8) as u8) as usize;
+            (l1 << 8) | l2
         } else {
-            // 2-byte length (big endian)
-            let b1 = self.stream.read_i8().await?;
-            let b2 = self.stream.read_i8().await?;
-            bytes_read += 2;
-            
-            if self.key_exchanged {
-                let l1 = (self.cipher.decrypt_byte(b1) as u8 & 0xFF) as usize;
-                let l2 = (self.cipher.decrypt_byte(b2) as u8 & 0xFF) as usize;
-                (l1 << 8) | l2
-            } else {
-                let l1 = (b1 as u8 & 0xFF) as usize;
-                let l2 = (b2 as u8 & 0xFF) as usize;
-                (l1 << 8) | l2
-            }
+            // ushort little-endian (như BinaryWriter.Write(ushort) trong C#)
+            ((b2 as usize) << 8) | (b1 as usize)
         };
+        
+        eprintln!("[DEBUG] read_message: b1={}, b2={}, length={}", b1, b2, length);
 
-        // Read data
+        // === Đọc data ===
         let mut data = vec![0u8; length];
         if length > 0 {
             self.stream.read_exact(&mut data).await?;
@@ -196,12 +183,20 @@ impl Session {
         // Track bytes received
         self.session_mgr.add_bytes_recv(self.session_id, bytes_read);
 
+        eprintln!("[DEBUG] read_message complete: cmd={}, data_len={}", command, data.len());
         Ok(Message::new(command, data))
     }
 
     async fn send_message(&mut self, command: i8, data: &[u8]) -> Result<(), ProtocolError> {
         let packet = protocol::build_response(&mut self.cipher, command, data);
         let packet_len = packet.len() as u64;
+        
+        // Debug: log first bytes for key exchange
+        if command == cmd::GET_SESSION_ID {
+            let hex: String = packet.iter().take(20).map(|b| format!("{:02X} ", b)).collect();
+            debug!("🔑 Sending key exchange packet (first 20 bytes): {}", hex);
+        }
+        
         self.stream.write_all(&packet).await?;
         self.stream.flush().await?;
         
@@ -214,24 +209,39 @@ impl Session {
     async fn handle_message(&mut self, msg: Message) -> Result<Vec<(i8, Vec<u8>)>, ProtocolError> {
         match msg.command {
             cmd::GET_SESSION_ID => {
-                // Key exchange
-                let key = self.cipher.generate_key(32);
-                self.key_exchanged = true;
+                // Key exchange - QUAN TRỌNG: phải build response TRƯỚC khi set cipher!
+                // Vì response này cần gửi KHÔNG encrypt
                 
+                // 1. Generate key nhưng CHƯA set vào cipher
+                let raw_key = Cipher::generate_key_only(32);
+                
+                // 2. Build response data
                 let mut writer = MessageWriter::new();
-                
-                // Write key length and key
-                writer.write_byte(key.len() as i8);
-                writer.write_sbytes(&key);
+                writer.write_byte(raw_key.len() as i8);
+                writer.write_sbytes(&raw_key);
                 
                 // IP2 và PORT2 (không dùng cho Freight, gửi dummy)
                 writer.write_utf("");
                 writer.write_int(0);
                 writer.write_byte(0); // isConnect2 = false
                 
-                info!("🔑 Session #{} key exchanged, length: {}", self.session_id, key.len());
+                // 3. Build packet TRƯỚC khi cipher ready (sẽ gửi unencrypted)
+                let response_data = writer.into_bytes();
+                let packet = protocol::build_response(&mut self.cipher, cmd::GET_SESSION_ID, &response_data);
                 
-                Ok(vec![(cmd::GET_SESSION_ID, writer.into_bytes())])
+                // 4. BÂY GIỜ mới set cipher với key
+                self.cipher.set_key_from_raw(&raw_key);
+                self.key_exchanged = true;
+                
+                info!("🔑 Session #{} key exchanged, length: {}", self.session_id, raw_key.len());
+                
+                // 5. Gửi packet trực tiếp (không qua send_message vì cipher đã thay đổi)
+                self.stream.write_all(&packet).await?;
+                self.stream.flush().await?;
+                self.session_mgr.add_bytes_sent(self.session_id, packet.len() as u64);
+                
+                // Return empty - đã gửi trực tiếp
+                Ok(vec![])
             }
 
             cmd::FREIGHT_INIT => {
