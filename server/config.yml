@@ -1,0 +1,51 @@
+# ====================================================
+# Freight Data Server - Configuration
+# ====================================================
+# Asset paths sử dụng placeholders:
+#   {base}  -> paths.base_dir
+#   {zoom}  -> zoom level của client (1, 2, 4, ...)
+#   {id}    -> resource ID
+# ====================================================
+
+server:
+  host: "0.0.0.0"
+  port: 14445
+  max_connections: 10000
+  # Zoom level mặc định nếu client chưa gửi FREIGHT_INIT
+  default_zoom: 1
+
+paths:
+  # Root directory chứa tất cả assets
+  base_dir: "./data"
+
+  # Icon sprites (PNG)
+  # Ví dụ: ./data/x2/icon/123.png
+  icon: "{base}/x{zoom}/icon/{id}.png"
+
+  # Effect data (binary)
+  # Ví dụ: ./data/x2/effectdata/45.dat
+  effect: "{base}/x{zoom}/effectdata/{id}.dat"
+
+  # Map template (binary)
+  # Ví dụ: ./data/x2/map/7.dat
+  map: "{base}/x{zoom}/map/{id}.dat"
+
+  # NPC template (binary)
+  # Ví dụ: ./data/x2/npc/10.dat
+  npc: "{base}/x{zoom}/npc/{id}.dat"
+
+  # Background template
+  # Ví dụ: ./data/x2/background/3.dat
+  background: "{base}/x{zoom}/background/{id}.dat"
+
+  # Tile set
+  # Ví dụ: ./data/x2/tileset/5.dat
+  tileset: "{base}/x{zoom}/tileset/{id}.dat"
+
+  # Image source (không có {id}, dùng cho cả session)
+  image_source: "{base}/x{zoom}/imagesource.dat"
+  image_source2: "{base}/x{zoom}/imagesource2.dat"
+
+  # Version files
+  smallimage_version: "{base}/x{zoom}/smallimage_version.dat"
+  bgitem_version: "{base}/x{zoom}/bgitem_version.dat"
