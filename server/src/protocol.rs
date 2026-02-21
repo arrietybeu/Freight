@@ -297,10 +297,15 @@ pub fn build_response(cipher: &mut Cipher, command: i8, data: &[u8]) -> Vec<u8> 
         
         if is_big_data {
             // 3-byte length for big data
+            // Client does: decrypt(byte) + 128 to recover each component
+            // So we must send: encrypt(component - 128)
             let len = data.len();
-            response.put_i8(cipher.encrypt_byte((len & 0xFF) as i8));
-            response.put_i8(cipher.encrypt_byte(((len >> 8) & 0xFF) as i8));
-            response.put_i8(cipher.encrypt_byte(((len >> 16) & 0xFF) as i8));
+            let l1 = ((len & 0xFF) as u8).wrapping_sub(128) as i8;
+            let l2 = (((len >> 8) & 0xFF) as u8).wrapping_sub(128) as i8;
+            let l3 = (((len >> 16) & 0xFF) as u8).wrapping_sub(128) as i8;
+            response.put_i8(cipher.encrypt_byte(l1));
+            response.put_i8(cipher.encrypt_byte(l2));
+            response.put_i8(cipher.encrypt_byte(l3));
         } else {
             // 2-byte length
             let len = data.len();

@@ -32,7 +32,7 @@ impl Handler {
         match msg.command {
             cmd::REQUEST_ICON => {
                 let id = reader.read_int();
-                info!("📦 [#{}] REQUEST_ICON id={} zoom={}", session_id, id, zoom);
+                info!("- [#{}] REQUEST_ICON id={} zoom={}", session_id, id, zoom);
                 
                 let file_path = paths.icon_path(zoom, id);
                 if let Some(data) = self.data_store.load_file(&file_path).await {
@@ -50,7 +50,7 @@ impl Handler {
             
             cmd::GET_EFFDATA => {
                 let id = reader.read_short();
-                info!("📦 [#{}] GET_EFFDATA id={} zoom={}", session_id, id, zoom);
+                info!("- [#{}] GET_EFFDATA id={} zoom={}", session_id, id, zoom);
                 
                 let file_path = paths.effect_path(zoom, id as i32);
                 if let Some(data) = self.data_store.load_file(&file_path).await {
@@ -68,7 +68,7 @@ impl Handler {
             
             cmd::REQUEST_MAPTEMPLATE => {
                 let map_id = reader.read_byte();
-                info!("📦 [#{}] REQUEST_MAPTEMPLATE id={} zoom={}", session_id, map_id, zoom);
+                info!("- [#{}] REQUEST_MAPTEMPLATE id={} zoom={}", session_id, map_id, zoom);
                 
                 let file_path = paths.map_path(zoom, map_id as i32);
                 if let Some(data) = self.data_store.load_file(&file_path).await {
@@ -86,7 +86,7 @@ impl Handler {
             
             cmd::REQUEST_NPCTEMPLATE => {
                 let npc_id = reader.read_byte();
-                info!("📦 [#{}] REQUEST_NPCTEMPLATE id={} zoom={}", session_id, npc_id, zoom);
+                info!("- [#{}] REQUEST_NPCTEMPLATE id={} zoom={}", session_id, npc_id, zoom);
                 
                 let file_path = paths.npc_path(zoom, npc_id as i32);
                 if let Some(data) = self.data_store.load_file(&file_path).await {
@@ -103,7 +103,7 @@ impl Handler {
             }
             
             cmd::GET_IMAGE_SOURCE => {
-                info!("📦 [#{}] GET_IMAGE_SOURCE zoom={}", session_id, zoom);
+                info!("- [#{}] GET_IMAGE_SOURCE zoom={}", session_id, zoom);
                 
                 let file_path = paths.image_source_path(zoom);
                 if let Some(data) = self.data_store.load_file(&file_path).await {
@@ -168,7 +168,7 @@ impl Handler {
             }
             
             cmd::BGITEM_VERSION => {
-                info!("📦 [#{}] BGITEM_VERSION zoom={}", session_id, zoom);
+                info!("- [#{}] BGITEM_VERSION zoom={}", session_id, zoom);
                 self.session_mgr.on_request_ok(session_id);
                 
                 let file_path = paths.bgitem_version_path(zoom);
@@ -179,7 +179,7 @@ impl Handler {
             }
             
             _ => {
-                warn!("⚠️ [#{}] Unknown command: {}", session_id, msg.command);
+                warn!("!️ [#{}] Unknown command: {}", session_id, msg.command);
                 Ok(vec![])
             }
         }
