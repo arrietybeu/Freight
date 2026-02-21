@@ -149,9 +149,6 @@ impl Session {
             cmd_byte
         };
         
-        eprintln!("[DEBUG] read_message: raw_cmd={}, decrypted={}, key_exchanged={}", 
-            cmd_byte, command, self.key_exchanged);
-        
         // === Đọc length (LUÔN 2 bytes từ client) ===
         let b1 = self.stream.read_u8().await?;
         let b2 = self.stream.read_u8().await?;
@@ -166,8 +163,6 @@ impl Session {
             // ushort little-endian (như BinaryWriter.Write(ushort) trong C#)
             ((b2 as usize) << 8) | (b1 as usize)
         };
-        
-        eprintln!("[DEBUG] read_message: b1={}, b2={}, length={}", b1, b2, length);
 
         // === Đọc data ===
         let mut data = vec![0u8; length];
@@ -183,7 +178,6 @@ impl Session {
         // Track bytes received
         self.session_mgr.add_bytes_recv(self.session_id, bytes_read);
 
-        eprintln!("[DEBUG] read_message complete: cmd={}, data_len={}", command, data.len());
         Ok(Message::new(command, data))
     }
 

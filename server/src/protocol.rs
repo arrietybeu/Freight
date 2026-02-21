@@ -319,10 +319,6 @@ pub fn build_response(cipher: &mut Cipher, command: i8, data: &[u8]) -> Vec<u8> 
         response.put_u8((data.len() >> 8) as u8);  // length high byte
         response.put_u8((data.len() & 0xFF) as u8);  // length low byte
         response.extend_from_slice(data);
-        
-        // Debug print
-        eprintln!("[DEBUG] build_response: cmd={} (0x{:02X}), len={}, first_bytes={:02X?}", 
-            command, command as u8, data.len(), &response[..std::cmp::min(10, response.len())]);
     }
     
     response.to_vec()
