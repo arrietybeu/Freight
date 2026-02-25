@@ -29,7 +29,7 @@ paths:
 
   # NPC template (binary)
   # Ví dụ: ./data/x2/npc/10.dat
-  npc: "{base}/x{zoom}/npc/{id}.dat"
+  npc: "{base}/x{zoom}/mob/{id}"
 
   background: "{base}/x{zoom}/bg/{id}.png"
 

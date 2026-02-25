@@ -72,6 +72,19 @@ impl Handler {
                 }
             }
 
+            cmd::GET_HEAD_AVATAR =>{
+
+                info!("- [#{}] GET_HEAD_AVATAR zoom={}", session_id, zoom);
+                Ok(vec![(cmd::GET_HEAD_AVATAR, vec![])])
+                // let file_path = paths.effect_path(zoom);
+                //
+                // msg.writer().writeShort(Manager.HEAD_AVATARS.size());
+                // for (HeadAvatar ha : Manager.HEAD_AVATARS) {
+                //     msg.writer().writeShort(ha.headId);
+                //     msg.writer().writeShort(ha.avatarId);
+                // }
+            }
+
 
             cmd::GET_EFFDATA => {
                 let id = reader.read_short();
@@ -119,20 +132,27 @@ impl Handler {
             }
             
             cmd::REQUEST_NPCTEMPLATE => {
-                let npc_id = reader.read_byte();
-                info!("- [#{}] REQUEST_NPCTEMPLATE id={} zoom={}", session_id, npc_id, zoom);
+                let id = reader.read_short();
+                info!("- [#{}] REQUEST_MOB id={} zoom={}", session_id, id, zoom);
                 
-                let file_path = paths.npc_path(zoom, npc_id as i32);
+                let file_path = paths.npc_path(zoom, id as i32);
                 if let Some(data) = self.data_store.load_file(&file_path).await {
                     self.session_mgr.on_request_ok(session_id);
-                    Ok(vec![(cmd::REQUEST_NPCTEMPLATE, data)])
+                    let mut w = MessageWriter::new();
+                    if id == 82 || id == 88 || id == 89 {
+                        w.write_byte(0);
+                    }
+                    if id < 82 || (id >= 90 && id <= 93) {
+                      w.write_short(id);
+                    }
+
+                    w.write_bytes(&data);
+
+                    Ok(vec![(cmd::REQUEST_NPCTEMPLATE, w.into_bytes())])
                 } else {
                     self.session_mgr.on_request_not_found(session_id);
-                    warn!("NpcTemplate {} not found at {}", npc_id, file_path);
-                    let mut w = MessageWriter::new();
-                    w.write_byte(npc_id);
-                    w.write_byte(0);
-                    Ok(vec![(cmd::REQUEST_NPCTEMPLATE, w.into_bytes())])
+                    warn!("NpcTemplate {} not found at {}", id, file_path);
+                    Ok(vec![(cmd::REQUEST_NPCTEMPLATE, vec![])])
                 }
             }
             

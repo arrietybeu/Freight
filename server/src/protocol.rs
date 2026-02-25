@@ -19,6 +19,7 @@ pub mod cmd {
     pub const SMALLIMAGE_VERSION: i8 = -77;
     pub const BGITEM_VERSION: i8 = -93;
     pub const TILE_SET: i8 = -82;
+    pub const GET_HEAD_AVATAR: i8 = -72;
     
     // Big data commands (3-byte length)
     pub const BIG_DATA_CMDS: &[i8] = &[-32, -66, 11, -67, -74, -87, 66, 12];
