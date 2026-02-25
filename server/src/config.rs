@@ -55,6 +55,9 @@ pub struct PathsConfig {
     #[serde(default = "default_effect_path")]
     pub effect: String,
 
+    #[serde(default = "default_effect_path")]
+    pub effect_image: String,
+
     /// Pattern cho map template
     #[serde(default = "default_map_path")]
     pub map: String,
@@ -177,6 +180,7 @@ impl Default for FreightConfig {
                 base_dir: default_base_dir(),
                 icon: default_icon_path(),
                 effect: default_effect_path(),
+                effect_image: default_effect_path(),
                 map: default_map_path(),
                 npc: default_npc_path(),
                 background: default_background_path(),
@@ -209,6 +213,10 @@ impl PathsConfig {
 
     pub fn effect_path(&self, zoom: u8, id: i32) -> String {
         self.resolve(&self.effect, zoom, Some(id))
+    }
+
+    pub fn effect_img_path(&self, zoom: u8, id: i32) -> String {
+        self.resolve(&self.effect_image, zoom, Some(id))
     }
 
     pub fn map_path(&self, zoom: u8, id: i32) -> String {

@@ -65,6 +65,8 @@ impl Handler {
                     w.write_bytes(&data);
                     Ok(vec![(cmd::BACKGROUND_TEMPLATE, w.into_bytes())])
                 } else {
+                    warn!("BG {} not found at {}", id, file_path);
+
                     self.session_mgr.on_request_not_found(session_id);
                     Ok(vec![(cmd::BACKGROUND_TEMPLATE, vec![])])
                 }
@@ -76,41 +78,26 @@ impl Handler {
                 info!("- [#{}] GET_EFFDATA id={} zoom={}", session_id, id, zoom);
                 
                 let file_path = paths.effect_path(zoom, id as i32);
-                if let Some(data) = self.data_store.load_file(&file_path).await {
+                let file_path_img = paths.effect_img_path(zoom, id as i32);
+
+                let eff_data = self.data_store.load_file(&file_path).await;
+                let eff_img = self.data_store.load_file(&file_path_img).await;
+                if let (Some(eff_data), Some(eff_img)) = (eff_data, eff_img) {
                     self.session_mgr.on_request_ok(session_id);
-                    Ok(vec![(cmd::GET_EFFDATA, data)])
-                } else {
-                    self.session_mgr.on_request_not_found(session_id);
-                    warn!("EffData {} not found at {}", id, file_path);
                     let mut w = MessageWriter::new();
                     w.write_short(id);
-                    w.write_int(0);
+                    w.write_int(eff_data.len() as i32);
+                    w.write_bytes(&eff_data);
+                    w.write_byte(0);
+                    w.write_int(eff_img.len() as i32);
+                    w.write_bytes(&eff_img);
                     Ok(vec![(cmd::GET_EFFDATA, w.into_bytes())])
-                }
-                /*
+                } else {
+                    warn!("Effect {} not found at {} and image {}", id, file_path, file_path_img);
 
-    public static void effData(Session session, int id, int... idtemp) {
-        int idT = id;
-        if (idtemp.length > 0 && idtemp[0] != 0) {
-            idT = idtemp[0];
-        }
-        Message msg;
-        try {
-            byte[] effData = FileIO.readFile("Eff/effect/x" + session.zoomLevel + "/data/DataEffect_" + idT);
-            byte[] effImg = FileIO.readFile("Eff/effect/x" + session.zoomLevel + "/img/ImgEffect_" + idT + ".png");
-            msg = new Message(-66);
-            msg.writer().writeShort(id);
-            msg.writer().writeInt(effData.length);
-            msg.writer().write(effData);
-            msg.writer().writeByte(0);
-            msg.writer().writeInt(effImg.length);
-            msg.writer().write(effImg);
-            session.sendMessage(msg);
-            msg.cleanup();
-        } catch (Exception e) {
-        }
-    }
-                 */
+                    self.session_mgr.on_request_not_found(session_id);
+                    Ok(vec![(cmd::GET_EFFDATA, vec![])])
+                }
             }
             
             cmd::REQUEST_MAPTEMPLATE => {

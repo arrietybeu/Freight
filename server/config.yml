@@ -19,7 +19,9 @@ paths:
 
   # Effect data (binary)
   # Ví dụ: ./data/x2/effectdata/45.dat
-  effect: "{base}/x{zoom}/effectdata/{id}.dat"
+  effect: "{base}/x{zoom}/effect/data/DataEffect_{id}"
+
+  effect_image: "{base}/x{zoom}/effect/img/ImgEffect_{id}.png"
 
   # Map template (binary)
   # Ví dụ: ./data/x2/map/7.dat
