@@ -89,6 +89,19 @@ pub struct PathsConfig {
     /// Pattern cho bgitem version file
     #[serde(default = "default_bgitem_path")]
     pub bgitem_version: String,
+
+    #[serde(default = "default_item_option_template_path")]
+    pub item_option_template: String,
+
+    #[serde(default = "default_item_template")]
+    pub item_template: String,
+
+    #[serde(default = "default_head_avatar_path")]
+    pub head_avatar: String,
+
+    #[serde(default = "default_head_2_frame_path")]
+    pub head_2_frame: String,
+
 }
 
 // ===== Default values =====
@@ -128,6 +141,23 @@ fn default_smallimage_path() -> String {
 }
 fn default_bgitem_path() -> String {
     "{base}/x{zoom}/bgitem_version.dat".to_string()
+}
+
+
+fn default_item_option_template_path() -> String {
+    "{base}/binary/item_option_template.bin".to_string()
+}
+
+fn default_item_template() -> String {
+    "{base}/binary/item_template.bin".to_string()
+}
+
+fn default_head_avatar_path() -> String {
+    "{base}/binary/head_avatar.bin".to_string()
+}
+
+fn default_head_2_frame_path() -> String {
+    "{base}/binary/head_2_frame.bin".to_string()
 }
 
 impl FreightConfig {
@@ -189,6 +219,10 @@ impl Default for FreightConfig {
                 image_source2: default_image_source2_path(),
                 smallimage_version: default_smallimage_path(),
                 bgitem_version: default_bgitem_path(),
+                item_option_template: default_item_option_template_path(),
+                item_template: default_item_template(),
+                head_avatar: default_head_avatar_path(),
+                head_2_frame: default_head_2_frame_path(),
             },
         }
     }
@@ -209,6 +243,21 @@ impl PathsConfig {
 
     pub fn icon_path(&self, zoom: u8, id: i32) -> String {
         self.resolve(&self.icon, zoom, Some(id))
+    }
+
+    pub fn item_option_template_path(&self) -> String {
+        self.resolve(&self.item_option_template, 0, None)
+    }
+
+    pub fn head_avatar_path(&self, zoom: u8) -> String {
+        self.resolve(&self.head_avatar, zoom, None)
+    }
+
+    pub fn head_2_frame_path(&self, zoom: u8) -> String {
+        self.resolve(&self.head_2_frame, zoom, None)
+    }
+    pub fn item_template_path(&self) -> String {
+        self.resolve(&self.item_template, 0, None)
     }
 
     pub fn effect_path(&self, zoom: u8, id: i32) -> String {

@@ -19,8 +19,9 @@ pub mod cmd {
     pub const SMALLIMAGE_VERSION: i8 = -77;
     pub const BGITEM_VERSION: i8 = -93;
     pub const TILE_SET: i8 = -82;
-    pub const GET_HEAD_AVATAR: i8 = -72;
-    
+    pub const GET_HEAD_AVATAR: i8 = 72;
+
+    pub const MESSAGE_NOT_MAP: i8 = -28;
     // Big data commands (3-byte length)
     pub const BIG_DATA_CMDS: &[i8] = &[-32, -66, 11, -67, -74, -87, 66, 12];
 }
@@ -286,20 +287,15 @@ impl MessageWriter {
     }
 }
 
-/// Build response message với encryption
 pub fn build_response(cipher: &mut Cipher, command: i8, data: &[u8]) -> Vec<u8> {
     let mut response = BytesMut::with_capacity(3 + data.len());
     
     let is_big_data = cmd::BIG_DATA_CMDS.contains(&command);
     
     if cipher.is_ready() {
-        // Encrypted response
         response.put_i8(cipher.encrypt_byte(command));
         
         if is_big_data {
-            // 3-byte length for big data
-            // Client does: decrypt(byte) + 128 to recover each component
-            // So we must send: encrypt(component - 128)
             let len = data.len();
             let l1 = ((len & 0xFF) as u8).wrapping_sub(128) as i8;
             let l2 = (((len >> 8) & 0xFF) as u8).wrapping_sub(128) as i8;
@@ -308,7 +304,6 @@ pub fn build_response(cipher: &mut Cipher, command: i8, data: &[u8]) -> Vec<u8> 
             response.put_i8(cipher.encrypt_byte(l2));
             response.put_i8(cipher.encrypt_byte(l3));
         } else {
-            // 2-byte length
             let len = data.len();
             response.put_i8(cipher.encrypt_byte(((len >> 8) & 0xFF) as i8));
             response.put_i8(cipher.encrypt_byte((len & 0xFF) as i8));

@@ -73,18 +73,53 @@ impl Handler {
             }
 
             cmd::GET_HEAD_AVATAR =>{
-
                 info!("- [#{}] GET_HEAD_AVATAR zoom={}", session_id, zoom);
-                Ok(vec![(cmd::GET_HEAD_AVATAR, vec![])])
-                // let file_path = paths.effect_path(zoom);
-                //
-                // msg.writer().writeShort(Manager.HEAD_AVATARS.size());
-                // for (HeadAvatar ha : Manager.HEAD_AVATARS) {
-                //     msg.writer().writeShort(ha.headId);
-                //     msg.writer().writeShort(ha.avatarId);
-                // }
+                let file_path = paths.head_avatar_path(zoom);
+                if let Some(data) = self.data_store.load_file(&file_path).await {
+                    self.session_mgr.on_request_ok(session_id);
+                    Ok(vec![(cmd::GET_HEAD_AVATAR, data)])
+                } else {
+                    self.session_mgr.on_request_not_found(session_id);
+                    warn!("HeadAvatar not found at {}", file_path);
+                    Ok(vec![(cmd::GET_HEAD_AVATAR, vec![])])
+                }
             }
+            cmd:: MESSAGE_NOT_MAP => {
+                let command = reader.read_byte();
 
+                if command == 8 {
+                    info!("- [#{}] UPDATE ITEM command={}", session_id, command);
+
+                    let item_option_template_path = paths.item_option_template_path();
+                    let item_template_path = paths.item_template_path();
+                    let head_2_frame_path = paths.head_2_frame_path(zoom);
+                    if let (Some(item_option_data), Some(item_template_data),Some(head_2_frame_path) ) = (
+                        self.data_store.load_file(&item_option_template_path).await,
+                        self.data_store.load_file(&item_template_path).await,
+                        self.data_store.load_file(&head_2_frame_path).await,
+                    ) {
+                        self.session_mgr.on_request_ok(session_id);
+                        let mut binary_item_option = MessageWriter::new();
+                        binary_item_option.write_bytes(&item_option_data);
+
+                        let mut binary_item_template = MessageWriter::new();
+                        binary_item_template.write_bytes(&item_template_data);
+
+                        let mut binary_head_2_frame = MessageWriter::new();
+                        binary_head_2_frame.write_bytes(&head_2_frame_path);
+
+                        return Ok(vec![
+                            (-28, binary_item_option.into_bytes()),
+                            (12, binary_item_template.into_bytes()),
+                            (-28, binary_head_2_frame.into_bytes()),
+                        ]);
+                    } else {
+                        self.session_mgr.on_request_not_found(session_id);
+                        warn!("ItemOptionTemplate or ItemTemplate not found at {} and {}", item_option_template_path, item_template_path);
+                    }
+                }
+                Ok(vec![(cmd::MESSAGE_NOT_MAP, vec![])])
+            }
 
             cmd::GET_EFFDATA => {
                 let id = reader.read_short();
