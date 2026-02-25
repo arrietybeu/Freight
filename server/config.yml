@@ -46,9 +46,8 @@ paths:
   bgitem_version: "{base}/x{zoom}/bgitem_version.dat"
 
   item_option_template: "{base}/binary/item_option_template.bin"
-
   item_template: "{base}/binary/item_template.bin"
-
   head_avatar: "{base}/binary/head_avatar.bin"
-
   head_2_frame: "{base}/binary/arr_head_2_frame.bin"
+
+  img_by_name: "{base}/img_by_name/{name}.png"

@@ -102,6 +102,8 @@ pub struct PathsConfig {
     #[serde(default = "default_head_2_frame_path")]
     pub head_2_frame: String,
 
+    #[serde(default = "defalut_img_by_name_path")]
+    pub img_by_name: String,
 }
 
 // ===== Default values =====
@@ -143,6 +145,9 @@ fn default_bgitem_path() -> String {
     "{base}/x{zoom}/bgitem_version.dat".to_string()
 }
 
+fn defalut_img_by_name_path() -> String {
+    "{base}/x{zoom}/img_by_name/{name}_{frame}.png".to_string()
+}
 
 fn default_item_option_template_path() -> String {
     "{base}/binary/item_option_template.bin".to_string()
@@ -223,6 +228,7 @@ impl Default for FreightConfig {
                 item_template: default_item_template(),
                 head_avatar: default_head_avatar_path(),
                 head_2_frame: default_head_2_frame_path(),
+                img_by_name: defalut_img_by_name_path(),
             },
         }
     }
@@ -243,6 +249,22 @@ impl PathsConfig {
 
     pub fn icon_path(&self, zoom: u8, id: i32) -> String {
         self.resolve(&self.icon, zoom, Some(id))
+    }
+
+    pub fn img_by_name_path(&self, zoom: u8, name: &str) -> String {
+        self.img_by_name.replace("{base}", &self.base_dir)
+            .replace("{zoom}", &zoom.to_string())
+            .replace("{id}", name)
+    }
+
+    pub fn img_by_name_dir(&self, zoom: u8) -> String {
+        let full = self.img_by_name
+            .replace("{base}", &self.base_dir)
+            .replace("{zoom}", &zoom.to_string());
+        match full.rfind('/') {
+            Some(pos) => full[..pos].to_string(),
+            None => full,
+        }
     }
 
     pub fn item_option_template_path(&self) -> String {

@@ -22,6 +22,8 @@ pub mod cmd {
     pub const GET_HEAD_AVATAR: i8 = 72;
 
     pub const MESSAGE_NOT_MAP: i8 = -28;
+
+    pub const GET_IMG_BY_NAME: i8 = 66;
     // Big data commands (3-byte length)
     pub const BIG_DATA_CMDS: &[i8] = &[-32, -66, 11, -67, -74, -87, 66, 12];
 }

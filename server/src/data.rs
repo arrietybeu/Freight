@@ -6,6 +6,7 @@ use dashmap::DashMap;
 use tracing::{debug, warn, info};
 use tokio::fs;
 
+use crate::config::PathsConfig;
 use crate::metrics::Metrics;
 
 /// Entry trong cache, kèm metadata cho LRU eviction
@@ -15,8 +16,17 @@ struct CacheEntry {
     last_access: std::time::Instant,
 }
 
+/// Thông tin một img_by_name: frame number và đường dẫn file
+#[derive(Debug, Clone)]
+pub struct ImageByNameEntry {
+    pub frame: i8,
+    pub path: String,
+}
+
 pub struct DataStore {
     cache: DashMap<String, CacheEntry>,
+    /// Index cho img_by_name: key = "{zoom}:{name}" (ví dụ "2:mount_0_0"), value = ImageByNameEntry
+    img_by_name_index: DashMap<String, ImageByNameEntry>,
     metrics: Arc<Metrics>,
     /// Max cache size in bytes (0 = unlimited)
     max_cache_bytes: u64,
@@ -26,6 +36,7 @@ impl DataStore {
     pub fn new(metrics: Arc<Metrics>, max_cache_bytes: u64) -> Self {
         Self {
             cache: DashMap::new(),
+            img_by_name_index: DashMap::new(),
             metrics,
             max_cache_bytes,
         }
@@ -144,5 +155,67 @@ impl DataStore {
     #[allow(dead_code)]
     pub fn cache_size(&self) -> usize {
         self.cache.len()
+    }
+
+    pub async fn scan_img_by_name(&self, paths: &PathsConfig) {
+        let mut total = 0;
+        for zoom in 1..=4u8 {
+            let dir = paths.img_by_name_dir(zoom);
+            let dir_path = std::path::Path::new(&dir);
+            if !dir_path.exists() {
+                debug!("img_by_name dir not found for zoom {}: {}", zoom, dir);
+                continue;
+            }
+
+            let mut read_dir = match fs::read_dir(&dir).await {
+                Ok(rd) => rd,
+                Err(e) => {
+                    warn!("Failed to read img_by_name dir {}: {}", dir, e);
+                    continue;
+                }
+            };
+
+            while let Ok(Some(entry)) = read_dir.next_entry().await {
+                let file_name = entry.file_name();
+                let file_name_str = file_name.to_string_lossy();
+
+                //  xử lý file .png
+                if !file_name_str.ends_with(".png") {
+                    continue;
+                }
+
+                // cut đuôi .png → "mount_0_0_4"
+                let stem = &file_name_str[..file_name_str.len() - 4];
+
+                // find dấu '_' cuối cùng → tách name và frame
+                if let Some(last_underscore) = stem.rfind('_') {
+                    let name = &stem[..last_underscore];
+                    let frame_str = &stem[last_underscore + 1..];
+
+                    if let Ok(frame) = frame_str.parse::<i8>() {
+                        let full_path = entry.path().to_string_lossy().to_string();
+                        let key = format!("{}:{}", zoom, name);
+                        self.img_by_name_index.insert(key, ImageByNameEntry {
+                            frame,
+                            path: full_path,
+                        });
+                        total += 1;
+                    } else {
+                        warn!("Cannot parse frame from img_by_name file: {}", file_name_str);
+                    }
+                } else {
+                    warn!("Invalid img_by_name filename format: {}", file_name_str);
+                }
+            }
+        }
+        info!("- Scanned {} img_by_name entries across all zoom levels", total);
+    }
+
+    /// Tìm img_by_name theo zoom và name
+    /// Client gửi name ví dụ "mount_0_0", server tìm entry tương ứng
+    /// Trả về (frame, file_path) nếu tìm thấy
+    pub fn lookup_img_by_name(&self, zoom: u8, name: &str) -> Option<ImageByNameEntry> {
+        let key = format!("{}:{}", zoom, name);
+        self.img_by_name_index.get(&key).map(|e| e.value().clone())
     }
 }

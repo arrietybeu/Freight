@@ -1,4 +1,3 @@
-
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -83,6 +82,30 @@ impl Handler {
                     warn!("HeadAvatar not found at {}", file_path);
                     Ok(vec![(cmd::GET_HEAD_AVATAR, vec![])])
                 }
+            }
+
+            cmd:: GET_IMG_BY_NAME =>{
+                let name = reader.read_utf().to_string();
+                info!("- [#{}] GET_IMG_BY_NAME name={} zoom={}", session_id, name, zoom);
+
+                if let Some(entry) = self.data_store.lookup_img_by_name(zoom, &name) {
+                    if let Some(data) = self.data_store.load_file(&entry.path).await {
+                        self.session_mgr.on_request_ok(session_id);
+                        let mut w = MessageWriter::new();
+                        w.write_utf(&name);
+                        w.write_byte(entry.frame);
+                        w.write_int(data.len() as i32);
+                        w.write_bytes(&data);
+                        return Ok(vec![(cmd::GET_IMG_BY_NAME, w.into_bytes())]);
+                    } else {
+                        self.session_mgr.on_request_not_found(session_id);
+                        warn!("Image by name file not readable: {}", entry.path);
+                    }
+                } else {
+                    self.session_mgr.on_request_not_found(session_id);
+                    warn!("Image by name not found in index: name={} zoom={}", name, zoom);
+                }
+                Ok(vec![])
             }
             cmd:: MESSAGE_NOT_MAP => {
                 let command = reader.read_byte();

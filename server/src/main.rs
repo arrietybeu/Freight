@@ -46,6 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     info!("- Cache limit: {}", Metrics::fmt_bytes(max_cache_bytes));
 
+    data_store.scan_img_by_name(&config.paths).await;
+
     // === Periodic stats task ===
     let stats_interval_secs = config.server.stats_interval_secs.unwrap_or(60);
     {
