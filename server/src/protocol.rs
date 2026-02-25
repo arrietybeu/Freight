@@ -280,7 +280,7 @@ impl MessageWriter {
         self.data.to_vec()
     }
     
-    pub fn len(&self) -> usize {
+    pub fn len(&self) -> usize {// độ dài data đã write không bao gồm header
         self.data.len()
     }
 }

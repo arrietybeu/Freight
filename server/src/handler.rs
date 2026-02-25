@@ -51,7 +51,26 @@ impl Handler {
                     Ok(vec![(cmd::REQUEST_ICON, w.into_bytes())])
                 }
             }
-            
+
+            cmd::BACKGROUND_TEMPLATE => {
+                let id = reader.read_short();
+                info!("- [#{}] BACKGROUND_TEMPLATE id={} zoom={}", session_id, id, zoom);
+
+                let file_path = paths.background_path(zoom, id as i32);
+                if let Some(data) = self.data_store.load_file(&file_path).await {
+                    self.session_mgr.on_request_ok(session_id);
+                    let mut w = MessageWriter::new();
+                    w.write_short(id);
+                    w.write_int(data.len() as i32);
+                    w.write_bytes(&data);
+                    Ok(vec![(cmd::BACKGROUND_TEMPLATE, w.into_bytes())])
+                } else {
+                    self.session_mgr.on_request_not_found(session_id);
+                    Ok(vec![(cmd::BACKGROUND_TEMPLATE, vec![])])
+                }
+            }
+
+
             cmd::GET_EFFDATA => {
                 let id = reader.read_short();
                 info!("- [#{}] GET_EFFDATA id={} zoom={}", session_id, id, zoom);
@@ -65,9 +84,33 @@ impl Handler {
                     warn!("EffData {} not found at {}", id, file_path);
                     let mut w = MessageWriter::new();
                     w.write_short(id);
-                    w.write_byte(0);
+                    w.write_int(0);
                     Ok(vec![(cmd::GET_EFFDATA, w.into_bytes())])
                 }
+                /*
+
+    public static void effData(Session session, int id, int... idtemp) {
+        int idT = id;
+        if (idtemp.length > 0 && idtemp[0] != 0) {
+            idT = idtemp[0];
+        }
+        Message msg;
+        try {
+            byte[] effData = FileIO.readFile("Eff/effect/x" + session.zoomLevel + "/data/DataEffect_" + idT);
+            byte[] effImg = FileIO.readFile("Eff/effect/x" + session.zoomLevel + "/img/ImgEffect_" + idT + ".png");
+            msg = new Message(-66);
+            msg.writer().writeShort(id);
+            msg.writer().writeInt(effData.length);
+            msg.writer().write(effData);
+            msg.writer().writeByte(0);
+            msg.writer().writeInt(effImg.length);
+            msg.writer().write(effImg);
+            session.sendMessage(msg);
+            msg.cleanup();
+        } catch (Exception e) {
+        }
+    }
+                 */
             }
             
             cmd::REQUEST_MAPTEMPLATE => {
@@ -131,21 +174,7 @@ impl Handler {
                     Ok(vec![(cmd::GET_IMAGE_SOURCE2, vec![])])
                 }
             }
-            
-            cmd::BACKGROUND_TEMPLATE => {
-                let id = reader.read_byte();
-                info!("- [#{}] BACKGROUND_TEMPLATE id={} zoom={}", session_id, id, zoom);
-                
-                let file_path = paths.background_path(zoom, id as i32);
-                if let Some(data) = self.data_store.load_file(&file_path).await {
-                    self.session_mgr.on_request_ok(session_id);
-                    Ok(vec![(cmd::BACKGROUND_TEMPLATE, data)])
-                } else {
-                    self.session_mgr.on_request_not_found(session_id);
-                    Ok(vec![(cmd::BACKGROUND_TEMPLATE, vec![])])
-                }
-            }
-            
+
             cmd::TILE_SET => {
                 let id = reader.read_byte();
                 info!("- [#{}] TILE_SET id={} zoom={}", session_id, id, zoom);

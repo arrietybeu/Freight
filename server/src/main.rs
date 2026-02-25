@@ -77,12 +77,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             loop {
                 match listener.accept().await {
                     Ok((socket, addr)) => {
-                        // Enforce max_connections
                         let current = session_mgr.active_count();
                         if current >= max_connections {
                             warn!("- Max connections reached ({}/{}), rejecting {} with thongbao", 
                                 current, max_connections, addr);
-                            
                             tokio::spawn(async move {
                                 let mut socket = socket;
                                 let text = "Máy chủ đã quá tải, vui lòng quay lại sau!";

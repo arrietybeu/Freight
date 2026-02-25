@@ -80,7 +80,6 @@ impl SessionManager {
         id
     }
 
-    /// Huỷ đăng ký khi session disconnect
     pub fn unregister(&self, session_id: u64) {
         if let Some((_, info)) = self.sessions.remove(&session_id) {
             let duration = info.duration_secs();
@@ -150,7 +149,6 @@ impl SessionManager {
         self.metrics.on_request_not_found();
     }
 
-    /// Số sessions hiện tại
     pub fn active_count(&self) -> usize {
         self.sessions.len()
     }

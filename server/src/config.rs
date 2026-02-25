@@ -109,7 +109,7 @@ fn default_npc_path() -> String {
     "{base}/x{zoom}/npc/{id}.dat".to_string()
 }
 fn default_background_path() -> String {
-    "{base}/x{zoom}/background/{id}.dat".to_string()
+    "{base}/x{zoom}/bg/{id}.png".to_string()
 }
 fn default_tileset_path() -> String {
     "{base}/x{zoom}/tileset/{id}.dat".to_string()

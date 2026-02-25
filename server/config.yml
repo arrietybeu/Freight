@@ -29,9 +29,7 @@ paths:
   # Ví dụ: ./data/x2/npc/10.dat
   npc: "{base}/x{zoom}/npc/{id}.dat"
 
-  # Background template
-  # Ví dụ: ./data/x2/background/3.dat
-  background: "{base}/x{zoom}/background/{id}.dat"
+  background: "{base}/x{zoom}/bg/{id}.png"
 
   # Tile set
   # Ví dụ: ./data/x2/tileset/5.dat
