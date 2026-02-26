@@ -12,7 +12,6 @@ use crate::metrics::Metrics;
 /// Entry trong cache, kèm metadata cho LRU eviction
 struct CacheEntry {
     data: Vec<u8>,
-    /// Timestamp truy cập gần nhất (monotonic, từ Instant)
     last_access: std::time::Instant,
 }
 
@@ -45,7 +44,6 @@ impl DataStore {
     /// Đọc file từ disk (có cache).
     /// `path` đã được resolve bởi PathsConfig (vd: "./data/x2/icon/123.png")
     pub async fn load_file(&self, path: &str) -> Option<Vec<u8>> {
-        // Kiểm tra cache trước
         if let Some(mut entry) = self.cache.get_mut(path) {
             entry.last_access = std::time::Instant::now();
             self.metrics.on_cache_hit();
@@ -179,15 +177,12 @@ impl DataStore {
                 let file_name = entry.file_name();
                 let file_name_str = file_name.to_string_lossy();
 
-                //  xử lý file .png
                 if !file_name_str.ends_with(".png") {
                     continue;
                 }
 
-                // cut đuôi .png → "mount_0_0_4"
                 let stem = &file_name_str[..file_name_str.len() - 4];
 
-                // find dấu '_' cuối cùng → tách name và frame
                 if let Some(last_underscore) = stem.rfind('_') {
                     let name = &stem[..last_underscore];
                     let frame_str = &stem[last_underscore + 1..];
@@ -211,9 +206,6 @@ impl DataStore {
         info!("- Scanned {} img_by_name entries across all zoom levels", total);
     }
 
-    /// Tìm img_by_name theo zoom và name
-    /// Client gửi name ví dụ "mount_0_0", server tìm entry tương ứng
-    /// Trả về (frame, file_path) nếu tìm thấy
     pub fn lookup_img_by_name(&self, zoom: u8, name: &str) -> Option<ImageByNameEntry> {
         let key = format!("{}:{}", zoom, name);
         self.img_by_name_index.get(&key).map(|e| e.value().clone())
