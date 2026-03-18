@@ -200,7 +200,7 @@ impl Handler {
                     if id == 82 || id == 88 || id == 89 {
                         w.write_byte(0);
                     }
-                    if id < 82 || (id >= 90 && id <= 93) {
+                    if id < 82 || id == 87 || id == 86 || (id >= 90 && id <= 93) {
                       w.write_short(id);
                     }
 
