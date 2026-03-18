@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (vd: v1.0.1)"
+        required: true
+        default: "v1.0.0-dev"
 
 permissions:
   contents: write
@@ -37,10 +43,20 @@ jobs:
         working-directory: server
         run: cargo build --release --target x86_64-pc-windows-msvc
 
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            echo "value=${{ github.event.inputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "value=${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Package artifact
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}"
+          $version = "${{ steps.version.outputs.value }}"
           $outDir = "freight-$version-windows-x64"
           New-Item -ItemType Directory -Path $outDir
 
@@ -52,9 +68,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Freight ${{ github.ref_name }}"
+          tag_name: ${{ steps.version.outputs.value }}
+          name: "Freight ${{ steps.version.outputs.value }}"
           body: |
-            ## Freight CDN Server ${{ github.ref_name }}
+            ## Freight CDN Server ${{ steps.version.outputs.value }}
 
             ### Cài đặt
             1. Giải nén file zip
@@ -63,6 +80,6 @@ jobs:
 
             ### Thay đổi
             ${{ github.event.head_commit.message }}
-          files: freight-${{ github.ref_name }}-windows-x64.zip
+          files: freight-${{ steps.version.outputs.value }}-windows-x64.zip
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event_name == 'workflow_dispatch' }}
